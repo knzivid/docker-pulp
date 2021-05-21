@@ -1,59 +1,75 @@
-version: '2'
+version: "3.8"
 services:
   db:
     image: postgres
-    environment:
-      - POSTGRES_USER=pulp
-      - POSTGRES_PASSWORD=pulp
+    env_file: ./settings/postgres.env
     ports:
-      - '127.0.0.1:5432:5432'
+      - "127.0.0.1:5432:5432"
     volumes:
-      - ./.volume/postgres:/var/lib/postgresql/data
+      - ./.volume/postgres:/var/lib/postgresql/data # WARNING: postgres is IO heavy and needs fast storage
     healthcheck:
       test: [ "CMD", "pg_isready", "-U", "pulp" ]
   redis:
     image: redis
     ports:
-      - '127.0.0.1:6379:6379'
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: [ "CMD", "redis-cli", "ping" ]
   api:
     image: pulp-api
-    env_file: .env
+    env_file: ./settings/pulp.env
     depends_on:
       db: { condition: service_healthy }
       redis: { condition: service_healthy }
     ports:
-      - '24817:24817'
+      - "24817:24817"
     volumes:
       - ./.volume/pulp:/var/lib/pulp
+      - ./settings/pulp.py:/etc/pulp/settings.py:ro
     healthcheck:
       test: [ "CMD", "curl", "--fail", "http://localhost:24817/pulp/api/v3/status/" ]
   content:
     image: pulp-content
-    env_file: .env
+    env_file: ./settings/pulp.env
     depends_on:
       db: { condition: service_healthy }
       api: { condition: service_healthy }
     ports:
-      - '24816:24816'
+      - "24816"
     volumes:
       - ./.volume/pulp:/var/lib/pulp
+      - ./settings/pulp.py:/etc/pulp/settings.py:ro
+    healthcheck:
+      test: [ "CMD", "curl", "--fail", "http://localhost:24816/pulp/content/" ]
+    deploy:
+      replicas: 4
   resource-manager:
     image: pulp-resource-manager
-    env_file: .env
+    env_file: ./settings/pulp.env
     depends_on:
       db: { condition: service_healthy }
       api: { condition: service_healthy }
       redis: { condition: service_healthy }
     volumes:
       - ./.volume/pulp:/var/lib/pulp
+      - ./settings/pulp.py:/etc/pulp/settings.py:ro
   worker:
     image: pulp-worker
-    env_file: .env
+    env_file: ./settings/pulp.env
     depends_on:
       db: { condition: service_healthy }
       api: { condition: service_healthy }
       redis: { condition: service_healthy }
     volumes:
       - ./.volume/pulp:/var/lib/pulp
+      - ./settings/pulp.py:/etc/pulp/settings.py:ro
+    deploy:
+      replicas: 4
+  content-ingress:
+    image: nginx
+    depends_on:
+      content: { condition: service_healthy }
+    ports:
+      - "24816:80"
+    volumes:
+      - ./settings/nginx-content-ingress.conf:/etc/nginx/nginx.conf:ro

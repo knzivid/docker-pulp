@@ -62,10 +62,7 @@ FROM fedora:31
 ENV PYTHONUNBUFFERED 1
 ENV PATH /opt/pulp/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-ENV DJANGO_SETTINGS_MODULE="pulpcore.app.settings" \
-    PULP_DATABASES__default__ENGINE="django.db.backends.postgresql_psycopg2" \
-    PULP_DATABASES__default__NAME="pulp" \
-    PULP_DATABASES__default__USER="pulp"
+ENV DJANGO_SETTINGS_MODULE="pulpcore.app.settings"
 
 COPY --from=build /opt/pulp /opt/pulp
 
@@ -73,7 +70,11 @@ ENV TINI_VERSION v0.19.0
 ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini /usr/local/bin/tini
 RUN chmod +x /usr/local/bin/tini
 
-RUN useradd --system -m -d /var/lib/pulp -s /sbin/nologin pulp
+ARG IMAGE_USER
+ARG IMAGE_UID
+ARG IMAGE_GID
+RUN groupadd -g $IMAGE_GID $IMAGE_USER
+RUN useradd --system -m -d /var/lib/pulp -s /sbin/nologin -u $IMAGE_UID -g $IMAGE_GID $IMAGE_USER
 
 RUN yum install -y curl \
       python3 \
@@ -91,4 +92,4 @@ RUN yum install -y curl \
     && yum clean all
 
 WORKDIR /var/lib/pulp
-USER pulp
+USER $IMAGE_USER

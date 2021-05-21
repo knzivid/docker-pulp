@@ -1,0 +1,25 @@
+SECRET_KEY = "replace-this"
+CONTENT_ORIGIN = "http://content:24816"
+TOKEN_AUTH_DISABLED = "True"
+
+REDIS_URL = "redis://redis:6379/1"
+
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "NAME": "pulp",
+        "HOST": "db",
+        "USER": "pulp",  # Matches postgres.env
+        "PASSWORD": "pulp",  # Matches postgres.env
+    }
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "loggers": {
+        "pulpcore.deprecation": {
+            "level": "ERROR",
+        }
+    },
+}
